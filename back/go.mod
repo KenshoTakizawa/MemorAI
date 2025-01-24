@@ -10,6 +10,8 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-resty/resty/v2 v2.16.4
 	github.com/google/uuid v1.3.0
+	github.com/lib/pq v1.10.9
+	github.com/sashabaranov/go-openai v1.19.4
 )
 
 require (

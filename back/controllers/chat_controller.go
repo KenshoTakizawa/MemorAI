@@ -30,6 +30,18 @@ func HandleChat(c *gin.Context) {
         return
     }
 
+	// TODO: RAGサービスを使用してプロンプトを強化
+    // ragService := services.NewRAGService(os.Getenv("POSTGRES_URI"))
+    // enhancedPrompt, err := ragService.EnhancePrompt(request.UserID, request.Message)
+    // if err != nil {
+    //     log.Printf("Error enhancing prompt: %v", err)
+    //     // エラー時は通常のプロンプトを使用
+    //     enhancedPrompt = request.Message
+    // }
+
+    // 強化されたプロンプトでOpenAIを呼び出し
+    // eplyContent, err := services.CallOpenAI(request.UserID, enhancedPrompt)
+
     // OpenAIからの返信を取得
     replyContent, err := services.CallOpenAI(request.UserID, request.Message)
 	log.Printf("replyContent: %+v", replyContent)

@@ -214,3 +214,26 @@ func GetAllConversations(userID string) ([]models.Conversation, error) {
 
 	return conversations, nil
 }
+
+func GetDynamoDBClient() *dynamodb.Client {
+    customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+        return aws.Endpoint{
+            URL: "http://localhost:8000",
+        }, nil
+    })
+
+    cfg, err := config.LoadDefaultConfig(context.TODO(),
+        config.WithRegion("us-east-1"),
+        config.WithEndpointResolverWithOptions(customResolver),
+        config.WithCredentialsProvider(credentials.StaticCredentialsProvider{
+            Value: aws.Credentials{
+                AccessKeyID: "dummy", SecretAccessKey: "dummy", SessionToken: "dummy",
+            },
+        }),
+    )
+    if err != nil {
+        panic(err)
+    }
+
+    return dynamodb.NewFromConfig(cfg)
+}

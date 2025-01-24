@@ -1,11 +1,13 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/sashabaranov/go-openai"
 )
 
 func CallOpenAI(userID string, message string) (string, error) {
@@ -41,13 +43,12 @@ func CallOpenAI(userID string, message string) (string, error) {
 			"content": recentConversations[i].Content,
 		})
 	}
-	
 
 	// 新しいメッセージを追加
 	// メッセージを追加
 	// messages = append(messages, map[string]string{
-		// "role":    "user",
-		// "content": message,
+	// "role":    "user",
+	// "content": message,
 	// })
 
 	// `content`だけを改行で羅列して出力
@@ -93,10 +94,35 @@ func CallOpenAI(userID string, message string) (string, error) {
 				fmt.Printf("Assistant message saved: %+v\n", assistantMessage)
 			}
 		}
-		
 
 		return messageContent, nil
 	}
 
 	return "", nil
+}
+
+// テキストをベクトル化する関数
+func (rs *RAGService) vectorizeText(text string) ([]float64, error) {
+	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+
+	resp, err := client.CreateEmbeddings(
+		context.Background(),
+		openai.EmbeddingRequest{
+			Input: []string{text},
+			Model: openai.AdaEmbeddingV2,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("embedding creation failed: %v", err)
+	}
+
+	if len(resp.Data) == 0 {
+		return nil, fmt.Errorf("no embeddings received")
+	}
+
+	embeddings := make([]float64, len(resp.Data[0].Embedding))
+	for i, v := range resp.Data[0].Embedding {
+		embeddings[i] = float64(v)
+	}
+	return embeddings, nil
 }
