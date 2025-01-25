@@ -101,6 +101,43 @@ class ChatScreenState extends State<ChatScreen> {
             Text('MemorAI', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 5.0),
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: const Icon(Icons.article, size: 16),
+              label: const Text('AIの話題ちょうだい', style: TextStyle(fontSize: 14)),
+              onPressed: () async {
+                try {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                  final aiTopic = await _chatService.getAITopic();
+                  setState(() {
+                    _messages.add(aiTopic);
+                    _isLoading = false;
+                    _scrollToBottom();
+                  });
+                } catch (e) {
+                  setState(() {
+                    _messages.add(ChatMessage(
+                      role: 'assistant',
+                      content: 'エラーが発生しました: $e',
+                    ));
+                    _isLoading = false;
+                    _scrollToBottom();
+                  });
+                }
+              },
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -187,7 +224,8 @@ class ChatScreenState extends State<ChatScreen> {
                                 try {
                                   await _chatService.updateMessageFlag(
                                     userId: '1',
-                                    timestamp: message.timestamp.toIso8601String(),
+                                    timestamp:
+                                        message.timestamp.toIso8601String(),
                                     isLiked: message.isLiked,
                                   );
                                 } catch (e) {
@@ -213,7 +251,8 @@ class ChatScreenState extends State<ChatScreen> {
                                 try {
                                   await _chatService.updateMessageFlag(
                                     userId: '1',
-                                    timestamp: message.timestamp.toIso8601String(),
+                                    timestamp:
+                                        message.timestamp.toIso8601String(),
                                     isDisliked: message.isDisliked,
                                   );
                                 } catch (e) {

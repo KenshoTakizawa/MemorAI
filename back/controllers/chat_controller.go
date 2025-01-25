@@ -107,3 +107,34 @@ func GetConversations(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"conversations": conversations})
 }
+
+func HandleResearchAI(c *gin.Context) {
+	userID := c.Query("userId") // クエリからUserIDを取得
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
+		return
+	}
+
+	// AIの話題をリサーチ
+	topic, err := services.ResearchAITopic(c)
+	if err != nil {
+		log.Printf("Error researching AI topic: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to research AI topic"})
+		return
+	}
+
+	// リサーチ結果をDynamoDBに保存
+	reply, err := services.SaveMessage(userID, "assistant", topic)
+	if err != nil {
+		log.Printf("Error saving AI research topic: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save AI research topic"})
+		return
+	}
+
+	// 保存した内容を返す
+	c.JSON(http.StatusOK, gin.H{
+		"reply":     reply.Content,                     // リサーチ結果の内容
+		"id":        reply.ID,                          // メッセージID
+		"timestamp": reply.Timestamp.Format(time.RFC3339), // タイムスタンプ
+	})
+}

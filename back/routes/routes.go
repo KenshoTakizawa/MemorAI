@@ -18,5 +18,7 @@ func SetupRouter() *gin.Engine {
     // 過去の会話を取得
     r.GET("/chat/conversations", controllers.GetConversations)
 
+    r.GET("/chat/research-ai", controllers.HandleResearchAI)
+
     return r
 }

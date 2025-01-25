@@ -86,4 +86,26 @@ class ChatService {
 
     return conversations.map((json) => ChatMessage.fromJson(json)).toList();
   }
+
+  Future<ChatMessage> getAITopic() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiUrl/research-ai?userId=$userId'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return ChatMessage(
+          id: data['id'],
+          content: data['reply'],
+          role: 'assistant',
+          timestamp: DateTime.parse(data['timestamp']),
+        );
+      } else {
+        throw Exception('Failed to fetch AI topic');
+      }
+    } catch (e) {
+      throw Exception('Error: $e');
+    }
+  }
 }

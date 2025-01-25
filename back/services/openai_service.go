@@ -22,7 +22,7 @@ func CallOpenAI(userID string, message string) (string, error) {
 	// デバッグログを追加
 	// fmt.Printf("Making request with userID: %s, message: %s\n", userID, message)
 
-	recentConversations, err := GetRecentConversations(userID, 5)
+	recentConversations, err := GetRecentConversations(userID, 10)
 	if err != nil {
 		// fmt.Printf("Error getting recent conversations: %v\n", err)
 		return "", err
