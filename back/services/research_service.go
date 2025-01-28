@@ -36,7 +36,7 @@ func ResearchAITopic(c *gin.Context) (string, error) {
 			},
 			{
 				"role":    "user",
-				"content": "最新のAIに関する話題を教えてください。",
+				"content": "最新のAIに関する話題を5つ以上教えてください。",
 			},
 		},
 		"max_tokens":               8000,  // 必要に応じて調整

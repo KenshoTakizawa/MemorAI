@@ -3,13 +3,13 @@ import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
 
 class ChatService {
-  static const String apiUrl = 'http://localhost:8080/chat'; // Go APIのエンドポイント
-  final String userId = "1"; // 固定のユーザーID
+  static const String apiUrl = 'http://172.16.80.125:8080/chat';
+  final String userId = "1"; 
 
-  ChatService._internal(); // コンストラクタを簡略化
+  ChatService._internal(); 
 
   static Future<ChatService> create() async {
-    return ChatService._internal(); // 直接インスタンスを返す
+    return ChatService._internal(); 
   }
 
   Future<ChatMessage> sendMessage(String message) async {
@@ -21,17 +21,17 @@ class ChatService {
         },
         body: jsonEncode({
           'message': message,
-          'user_id': userId, // UserID を送信
+          'user_id': userId, 
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return ChatMessage(
-          id: data['id'], // サーバーから返されるIDをセット
-          content: data['reply'], // サーバーから返される返信内容
-          role: 'assistant',
-          timestamp: DateTime.parse(data['timestamp']), // タイムスタンプをDateTimeに変換
+          id: data['id'], 
+          content: data['reply'], 
+          role: 'asistant',
+          timestamp: DateTime.parse(data['timestamp']), 
         );
       } else {
         throw Exception('Failed to connect to API');
@@ -92,7 +92,6 @@ class ChatService {
       final response = await http.get(
         Uri.parse('$apiUrl/research-ai?userId=$userId'),
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return ChatMessage(

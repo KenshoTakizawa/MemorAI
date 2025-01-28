@@ -25,9 +25,19 @@ class ChatScreenState extends State<ChatScreen> {
     _initializeChatService();
   }
 
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+    });
+  }
+
   Future<void> _initializeChatService() async {
     _chatService = await ChatService.create();
-    await _loadPastConversations(); // 過去の会話をロード
+    await _loadPastConversations();
     setState(() {
       _isInitialized = true;
     });
@@ -35,12 +45,17 @@ class ChatScreenState extends State<ChatScreen> {
 
   Future<void> _loadPastConversations() async {
     try {
-      final pastMessages =
-          await _chatService.fetchConversations('1'); // ユーザーIDを固定
+      final pastMessages = await _chatService.fetchConversations('1');
       setState(() {
         _messages.addAll(pastMessages);
       });
-      _scrollToBottom(); // ここで一番下にスクロール
+
+      // リスト追加後、次のフレーム（＝描画完了）になってからスクロールする
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        _scrollToBottom();
+        await Future.delayed(const Duration(milliseconds: 2000));
+        _scrollToBottom();
+      });
     } catch (e) {
       log("Failed to load past conversations: $e");
     }
@@ -57,6 +72,10 @@ class ChatScreenState extends State<ChatScreen> {
       setState(() {
         _messages.add(userMessage);
         _isLoading = true;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        _scrollToBottom();
       });
 
       _controller.clear();
@@ -81,13 +100,13 @@ class ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      }
-    });
-  }
+  // void _scrollToBottom() {
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     if (_scrollController.hasClients) {
+  //       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+  //     }
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {

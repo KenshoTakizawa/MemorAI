@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// 定期実行の設定
-	ticker := time.NewTicker(3 * time.Hour)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 
 	for range ticker.C {

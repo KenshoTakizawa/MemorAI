@@ -126,3 +126,4 @@ func (rs *RAGService) vectorizeText(text string) ([]float64, error) {
 	}
 	return embeddings, nil
 }
+

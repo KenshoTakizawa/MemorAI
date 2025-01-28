@@ -1,78 +1,92 @@
 package controllers
 
 import (
-	"back/services"
+	"database/sql"
+	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"log"
-
 	"github.com/gin-gonic/gin"
+
+	"back/services"
 )
 
+// TODO: ファイル切り分ける
+func getDB() (*sql.DB, error) {
+	dsn := os.Getenv("POSTGRES_URI")
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 func HandleChat(c *gin.Context) {
-    var request struct {
-        Message string `json:"message" binding:"required"`
-        UserID  string `json:"user_id" binding:"required"`
-    }
+	var request struct {
+		Message string `json:"message" binding:"required"`
+		UserID  string `json:"user_id" binding:"required"`
+	}
 
-    if err := c.BindJSON(&request); err != nil {
-        log.Printf("Error binding JSON: %v", err)
-        c.JSON(400, gin.H{"error": "Message and UserID are required"})
-        return
-    }
+	// JSONバインド
+	if err := c.BindJSON(&request); err != nil {
+		log.Printf("Error binding JSON: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Message and UserID are required"})
+		return
+	}
 
-    // ユーザーからのメッセージを保存
-    _, err := services.SaveMessage(request.UserID, "user", request.Message)
-    if err != nil {
-        log.Printf("Error saving message: %v", err)
-        c.JSON(500, gin.H{"error": "Failed to save user message"})
-        return
-    }
+	if _, err := services.SaveMessage(request.UserID, "user", request.Message); err != nil {
+		log.Printf("Error saving user message: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user message"})
+		return
+	}
 
-	// TODO: RAGサービスを使用してプロンプトを強化
-    // ragService := services.NewRAGService(os.Getenv("POSTGRES_URI"))
-    // enhancedPrompt, err := ragService.EnhancePrompt(request.UserID, request.Message)
-    // if err != nil {
-    //     log.Printf("Error enhancing prompt: %v", err)
-    //     // エラー時は通常のプロンプトを使用
-    //     enhancedPrompt = request.Message
-    // }
+	// ---------- RAGサービスによるプロンプト拡張部分 START ----------
+	db, err := getDB() 
+	if err != nil {
+		log.Printf("Error getting DB: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to connect DB"})
+		return
+	}
+	defer db.Close()
 
-    // 強化されたプロンプトでOpenAIを呼び出し
-    // eplyContent, err := services.CallOpenAI(request.UserID, enhancedPrompt)
+	ragService := services.NewRAGService(db, os.Getenv("OPENAI_API_KEY"))
 
-    // OpenAIからの返信を取得
-    replyContent, err := services.CallOpenAI(request.UserID, request.Message)
-	log.Printf("replyContent: %+v", replyContent)
-    if err != nil {
-        log.Printf("Error calling OpenAI: %v", err)
-        c.JSON(500, gin.H{"error": err.Error()})
-        return
-    }
+	// RAG で拡張プロンプトを作成
+	enhancedPrompt, err := ragService.EnhancePrompt(request.UserID, request.Message)
+	if err != nil {
+		log.Printf("Error enhancing prompt: %v", err)
+		// エラー時はとりあえず通常の入力を使用
+		enhancedPrompt = request.Message
+	}
+	// ---------- RAGサービスによるプロンプト拡張部分 END ----------
 
-    // 返信を保存
-    reply, err := services.SaveMessage(request.UserID, "assistant", replyContent)
-    if err != nil {
-        log.Printf("Error saving bot reply: %v", err)
-        c.JSON(500, gin.H{"error": "Failed to save bot reply"})
-        return
-    }
+	replyContent, err := services.CallOpenAI(request.UserID, enhancedPrompt)
+	if err != nil {
+		log.Printf("Error calling OpenAI: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-	log.Printf("reply: %+v", reply)
+	reply, err := services.SaveMessage(request.UserID, "assistant", replyContent)
+	if err != nil {
+		log.Printf("Error saving bot reply: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save bot reply"})
+		return
+	}
 
-    // 必要な情報を含むレスポンスを返す
-    c.JSON(200, gin.H{
-        "reply": reply.Content,       // OpenAI の返信内容
-        "id": reply.ID,               // 保存されたメッセージの ID
-        "timestamp": reply.Timestamp.Format(time.RFC3339), // タイムスタンプを返す
-    })
+	// 必要な情報を含むレスポンスを返す
+	c.JSON(http.StatusOK, gin.H{
+		"reply":     reply.Content,
+		"id":        reply.ID,
+		"timestamp": reply.Timestamp.Format(time.RFC3339),
+	})
 }
 
 func UpdateMessageFlag(c *gin.Context) {
 	type RequestBody struct {
-		UserID     string `json:"userId" binding:"required"`    // UserIDは必須
-		Timestamp  string `json:"timestamp" binding:"required"` // Timestampを追加
+		UserID     string `json:"userId" binding:"required"`
+		Timestamp  string `json:"timestamp" binding:"required"`
 		IsLiked    *bool  `json:"isLiked"`
 		IsDisliked *bool  `json:"isDisliked"`
 	}
@@ -93,7 +107,7 @@ func UpdateMessageFlag(c *gin.Context) {
 }
 
 func GetConversations(c *gin.Context) {
-	userID := c.Query("userId") // クエリパラメータからuserIdを取得
+	userID := c.Query("userId")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
 		return
@@ -109,7 +123,7 @@ func GetConversations(c *gin.Context) {
 }
 
 func HandleResearchAI(c *gin.Context) {
-	userID := c.Query("userId") // クエリからUserIDを取得
+	userID := c.Query("userId")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "userId is required"})
 		return
@@ -133,8 +147,8 @@ func HandleResearchAI(c *gin.Context) {
 
 	// 保存した内容を返す
 	c.JSON(http.StatusOK, gin.H{
-		"reply":     reply.Content,                     // リサーチ結果の内容
-		"id":        reply.ID,                          // メッセージID
-		"timestamp": reply.Timestamp.Format(time.RFC3339), // タイムスタンプ
+		"reply":     reply.Content,
+		"id":        reply.ID,
+		"timestamp": reply.Timestamp.Format(time.RFC3339),
 	})
 }

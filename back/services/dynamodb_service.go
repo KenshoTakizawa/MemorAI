@@ -201,12 +201,55 @@ func GetAllConversations(userID string) ([]models.Conversation, error) {
 
 	conversations := make([]models.Conversation, 0)
 	for _, item := range result.Items {
-		timestamp, _ := time.Parse(time.RFC3339, item["Timestamp"].(*types.AttributeValueMemberS).Value)
+		// IDの型アサーションを安全に実施
+		idAttr, ok := item["ID"].(*types.AttributeValueMemberS)
+		if !ok || idAttr == nil {
+			fmt.Println("Missing or invalid ID")
+			continue
+		}
+		id := idAttr.Value
+
+		// UserIDの型アサーションを安全に実施
+		userIDAttr, ok := item["UserID"].(*types.AttributeValueMemberS)
+		if !ok || userIDAttr == nil {
+			fmt.Println("Missing or invalid UserID")
+			continue
+		}
+		userID := userIDAttr.Value
+
+		// Roleの型アサーションを安全に実施
+		roleAttr, ok := item["Role"].(*types.AttributeValueMemberS)
+		if !ok || roleAttr == nil {
+			fmt.Println("Missing or invalid Role")
+			continue
+		}
+		role := roleAttr.Value
+
+		// Contentの型アサーションを安全に実施
+		contentAttr, ok := item["Content"].(*types.AttributeValueMemberS)
+		if !ok || contentAttr == nil {
+			fmt.Println("Missing or invalid Content")
+			continue
+		}
+		content := contentAttr.Value
+
+		// Timestampの型アサーションを安全に実施
+		timestampAttr, ok := item["Timestamp"].(*types.AttributeValueMemberS)
+		if !ok || timestampAttr == nil {
+			fmt.Println("Missing or invalid Timestamp")
+			continue
+		}
+		timestamp, err := time.Parse(time.RFC3339, timestampAttr.Value)
+		if err != nil {
+			fmt.Printf("Invalid Timestamp format: %v\n", err)
+			continue
+		}
+
 		conv := models.Conversation{
-			ID:        item["ID"].(*types.AttributeValueMemberS).Value,
-			UserID:    item["UserID"].(*types.AttributeValueMemberS).Value,
-			Role:      item["Role"].(*types.AttributeValueMemberS).Value,
-			Content:   item["Content"].(*types.AttributeValueMemberS).Value,
+			ID:        id,
+			UserID:    userID,
+			Role:      role,
+			Content:   content,
 			Timestamp: timestamp,
 		}
 		conversations = append(conversations, conv)
@@ -214,6 +257,7 @@ func GetAllConversations(userID string) ([]models.Conversation, error) {
 
 	return conversations, nil
 }
+
 
 func GetDynamoDBClient() *dynamodb.Client {
     customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
